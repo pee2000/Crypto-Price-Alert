@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Price Alert</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            background: #1e1e1e;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+            width: 90%;
+            max-width: 400px;
+            margin: auto;
+            border-radius: 10px;
+        }
+        h1 {
+            color: #4caf50;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px;
+            width: 100%;
+            background: #4caf50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        #message {
+            margin-top: 10px;
+            color: red;
+        }
+        .crypto-list {
+            margin-top: 20px;
+            text-align: left;
+        }
+        .crypto-item {
+            background: #2a2a2a;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .crypto-item img {
+            width: 25px;
+            height: 25px;
+            margin-right: 10px;
+        }
+        .crypto-name {
+            display: flex;
+            align-items: center;
+        }
+        .price-up {
+            color: #4caf50;
+        }
+        .price-down {
+            color: #ff4c4c;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Crypto Price Alert</h1>
+        <p>Get notified when crypto prices rise significantly!</p>
+        <input type="email" id="email" placeholder="Enter your email">
+        <button onclick="subscribe()">Subscribe</button>
+        <div id="message"></div>
+
+        <h2>Trending Cryptos</h2>
+        <div id="crypto-list" class="crypto-list">Loading...</div>
+    </div>
+
+    <script>
+        async function fetchCryptoData() {
+            try {
+                const response = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd');
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                console.error("Error fetching crypto data:", error);
+                return [];
+            }
+        }
+
+        async function displayTrendingCryptos() {
+            const cryptoList = document.getElementById("crypto-list");
+            cryptoList.innerHTML = "Loading...";
+            
+            const data = await fetchCryptoData();
+            if (data.length === 0) {
+                cryptoList.innerHTML = "Failed to load data.";
+                return;
+            }
+
+            cryptoList.innerHTML = "";
+            data.slice(0, 5).forEach(coin => {
+                const priceChangeClass = coin.price_change_percentage_24h > 0 ? "price-up" : "price-down";
+                const coinElement = `
+                    <div class="crypto-item">
+                        <div class="crypto-name">
+                            <img src="${coin.image}" alt="${coin.name}">
+                            ${coin.name} (${coin.symbol.toUpperCase()})
+                        </div>
+                        <span class="${priceChangeClass}">
+                            ${coin.price_change_percentage_24h.toFixed(2)}%
+                        </span>
+                    </div>
+                `;
+                cryptoList.innerHTML += coinElement;
+            });
+        }
+
+        async function subscribe() {
+            const email = document.getElementById("email").value;
+            if (!email) {
+                document.getElementById("message").innerText = "Please enter a valid email!";
+                return;
+            }
+
+            const data = await fetchCryptoData();
+            const risingCryptos = data.filter(coin => coin.price_change_percentage_24h > 5);
+
+            if (risingCryptos.length > 0) {
+                sendEmailAlert(email, risingCryptos);
+            } else {
+                document.getElementById("message").innerText = "No significant price increase detected.";
+            }
+        }
+
+        function sendEmailAlert(email, risingCryptos) {
+            const coinList = risingCryptos.map(coin => `${coin.name} (${coin.symbol.toUpperCase()}) - Up ${coin.price_change_percentage_24h.toFixed(2)}%`).join("\n");
+
+            const emailBody = `The following cryptocurrencies have increased significantly:\n\n${coinList}`;
+
+            window.location.href = `mailto:${email}?subject=Crypto Price Alert!&body=${encodeURIComponent(emailBody)}`;
+        }
+
+        displayTrendingCryptos();
+    </script>
+
+</body>
+</html>
